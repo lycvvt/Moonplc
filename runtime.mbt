@@ -1,11 +1,10 @@
 ///| PLC 运行时执行引擎与扫描周期调度器 (Scan Cycle Scheduler)
 
-///|
-/// 运行时执行环境
+///| 运行时执行环境
 pub(all) struct PlcRuntime {
   mem : PlcMemory
   fb_instances : Map[String, FbInstance]
-  mut program : Program?
+  mut program : Option[Program]
 
   // 扫描周期状态统计
   mut cycle_count : Int64
@@ -15,8 +14,7 @@ pub(all) struct PlcRuntime {
   mut is_running : Bool
 } derive(Debug)
 
-///|
-/// 创建 PLC 运行时
+///| 创建 PLC 运行时
 pub fn PlcRuntime::new() -> PlcRuntime {
   {
     mem: PlcMemory::new(),
@@ -30,8 +28,7 @@ pub fn PlcRuntime::new() -> PlcRuntime {
   }
 }
 
-///|
-/// 加载程序 (POU) 并初始化变量
+///| 加载程序 (POU) 并初始化变量
 pub fn PlcRuntime::load_program(self : PlcRuntime, prog : Program) -> Unit {
   self.program = Some(prog)
 
@@ -44,7 +41,7 @@ pub fn PlcRuntime::load_program(self : PlcRuntime, prog : Program) -> Unit {
 
     match v.init_val {
       Some(val) => self.mem.set_var(v.name, val)
-      None =>
+      None => {
         // 默认零值
         if v.var_type == "BOOL" {
           self.mem.set_var(v.name, PlcValue::Bool(false))
@@ -60,42 +57,55 @@ pub fn PlcRuntime::load_program(self : PlcRuntime, prog : Program) -> Unit {
           self.fb_instances[v.name] = FbInstance::Tof(TofTimer::new())
         } else if v.var_type == "TP" {
           self.fb_instances[v.name] = FbInstance::Tp(TpTimer::new())
+        } else if v.var_type == "TONR" {
+          self.fb_instances[v.name] = FbInstance::Tonr(TonrTimer::new())
         } else if v.var_type == "CTU" {
           self.fb_instances[v.name] = FbInstance::Ctu(CtuCounter::new())
+        } else if v.var_type == "CTUD" {
+          self.fb_instances[v.name] = FbInstance::Ctud(CtudCounter::new())
+        } else if v.var_type == "SR" {
+          self.fb_instances[v.name] = FbInstance::Sr(SrFlipFlop::new())
+        } else if v.var_type == "RS" {
+          self.fb_instances[v.name] = FbInstance::Rs(RsFlipFlop::new())
+        } else if v.var_type == "R_TRIG" {
+          self.fb_instances[v.name] = FbInstance::Rtrig(RTrig::new())
+        } else if v.var_type == "F_TRIG" {
+          self.fb_instances[v.name] = FbInstance::Ftrig(FTrig::new())
         }
+      }
     }
   }
 }
 
 // ------------------- 表达式求值器 -------------------
 
-///|
-/// 计算表达式的值
+///| 计算表达式的值
 pub fn PlcRuntime::eval_expr(self : PlcRuntime, expr : Expr) -> PlcValue {
   match expr {
     Expr::Literal(v) => v
     Expr::Variable(name) => self.mem.get_var(name)
     Expr::DirectAddress(addr) => self.mem.get_address_val(addr)
-    Expr::FieldAccess(inst_name, field) =>
+    Expr::FieldAccess(inst_name, field) => {
       match self.fb_instances.get(inst_name) {
         Some(fb) => fb.get_field(field)
         None => self.mem.get_var("\{inst_name}.\{field}")
       }
+    }
     Expr::Unary(op, sub_expr) => {
       let v = self.eval_expr(sub_expr)
       match op {
         UnaryOp::Not => PlcValue::Bool(!v.is_true())
-        UnaryOp::Neg =>
+        UnaryOp::Neg => {
           match v {
             PlcValue::Int(i) => PlcValue::Int(-i)
             PlcValue::Real(r) => PlcValue::Real(-r)
             _ => PlcValue::Null
           }
+        }
       }
     }
     Expr::Binary(left, op, right) => {
       let lv = self.eval_expr(left)
-      // 逻辑短路支持
       if op == BinaryOp::And && !lv.is_true() {
         return PlcValue::Bool(false)
       }
@@ -126,13 +136,8 @@ pub fn PlcRuntime::eval_expr(self : PlcRuntime, expr : Expr) -> PlcValue {
 
 // ------------------- 语句执行器 -------------------
 
-///|
-/// 执行单个语句
-pub fn PlcRuntime::execute_statement(
-  self : PlcRuntime,
-  stmt : Stmt,
-  delta_ms : Int64,
-) -> Unit {
+///| 执行单个语句
+pub fn PlcRuntime::execute_statement(self : PlcRuntime, stmt : Stmt, delta_ms : Int64) -> Unit {
   match stmt {
     Stmt::Assign(var_name, expr) => {
       let val = self.eval_expr(expr)
@@ -184,13 +189,12 @@ pub fn PlcRuntime::execute_statement(
       }
     }
     Stmt::FbCall(inst_name, _, args) => {
-      // 确保实例存在，若不存在按 TON 默认初始化
       if !self.fb_instances.contains(inst_name) {
         self.fb_instances[inst_name] = FbInstance::Ton(TonTimer::new())
       }
 
       match self.fb_instances.get(inst_name) {
-        Some(fb) =>
+        Some(fb) => {
           match fb {
             FbInstance::Ton(ton) => {
               let mut in_val = false
@@ -249,6 +253,28 @@ pub fn PlcRuntime::execute_statement(
               self.mem.set_var("\{inst_name}.Q", PlcValue::Bool(tp.q))
               self.mem.set_var("\{inst_name}.ET", PlcValue::Time(tp.et))
             }
+            FbInstance::Tonr(tonr) => {
+              let mut in_val = false
+              let mut reset_val = false
+              let mut pt_val = 0L
+              for pair in args {
+                let (k, expr) = pair
+                if k == "IN" || k == "in" {
+                  in_val = self.eval_expr(expr).is_true()
+                } else if k == "RESET" || k == "reset" || k == "R" || k == "r" {
+                  reset_val = self.eval_expr(expr).is_true()
+                } else if k == "PT" || k == "pt" {
+                  match self.eval_expr(expr) {
+                    PlcValue::Time(t) => pt_val = t
+                    PlcValue::Int(i) => pt_val = i.to_int64()
+                    _ => ()
+                  }
+                }
+              }
+              tonr.tick(in_val, reset_val, pt_val, delta_ms)
+              self.mem.set_var("\{inst_name}.Q", PlcValue::Bool(tonr.q))
+              self.mem.set_var("\{inst_name}.ET", PlcValue::Time(tonr.et))
+            }
             FbInstance::Ctu(ctu) => {
               let mut cu_val = false
               let mut r_val = false
@@ -267,7 +293,69 @@ pub fn PlcRuntime::execute_statement(
               self.mem.set_var("\{inst_name}.Q", PlcValue::Bool(ctu.q))
               self.mem.set_var("\{inst_name}.CV", PlcValue::Int(ctu.cv))
             }
+            FbInstance::Ctud(ctud) => {
+              let mut cu_val = false
+              let mut cd_val = false
+              let mut r_val = false
+              let mut ld_val = false
+              let mut pv_val = 0
+              for pair in args {
+                let (k, expr) = pair
+                if k == "CU" || k == "cu" { cu_val = self.eval_expr(expr).is_true() }
+                else if k == "CD" || k == "cd" { cd_val = self.eval_expr(expr).is_true() }
+                else if k == "R" || k == "r" { r_val = self.eval_expr(expr).is_true() }
+                else if k == "LD" || k == "ld" { ld_val = self.eval_expr(expr).is_true() }
+                else if k == "PV" || k == "pv" { pv_val = self.eval_expr(expr).to_int() }
+              }
+              ctud.tick(cu_val, cd_val, r_val, ld_val, pv_val)
+              self.mem.set_var("\{inst_name}.QU", PlcValue::Bool(ctud.qu))
+              self.mem.set_var("\{inst_name}.QD", PlcValue::Bool(ctud.qd))
+              self.mem.set_var("\{inst_name}.CV", PlcValue::Int(ctud.cv))
+            }
+            FbInstance::Sr(sr) => {
+              let mut s1 = false
+              let mut r = false
+              for pair in args {
+                let (k, expr) = pair
+                if k == "S1" || k == "s1" || k == "S" || k == "s" { s1 = self.eval_expr(expr).is_true() }
+                else if k == "R" || k == "r" { r = self.eval_expr(expr).is_true() }
+              }
+              let q = sr.tick(s1, r)
+              self.mem.set_var("\{inst_name}.Q1", PlcValue::Bool(q))
+              self.mem.set_var("\{inst_name}.Q", PlcValue::Bool(q))
+            }
+            FbInstance::Rs(rs) => {
+              let mut s = false
+              let mut r1 = false
+              for pair in args {
+                let (k, expr) = pair
+                if k == "S" || k == "s" { s = self.eval_expr(expr).is_true() }
+                else if k == "R1" || k == "r1" || k == "R" || k == "r" { r1 = self.eval_expr(expr).is_true() }
+              }
+              let q = rs.tick(s, r1)
+              self.mem.set_var("\{inst_name}.Q1", PlcValue::Bool(q))
+              self.mem.set_var("\{inst_name}.Q", PlcValue::Bool(q))
+            }
+            FbInstance::Rtrig(rtrig) => {
+              let mut clk = false
+              for pair in args {
+                let (k, expr) = pair
+                if k == "CLK" || k == "clk" { clk = self.eval_expr(expr).is_true() }
+              }
+              let q = rtrig.tick(clk)
+              self.mem.set_var("\{inst_name}.Q", PlcValue::Bool(q))
+            }
+            FbInstance::Ftrig(ftrig) => {
+              let mut clk = false
+              for pair in args {
+                let (k, expr) = pair
+                if k == "CLK" || k == "clk" { clk = self.eval_expr(expr).is_true() }
+              }
+              let q = ftrig.tick(clk)
+              self.mem.set_var("\{inst_name}.Q", PlcValue::Bool(q))
+            }
           }
+        }
         None => ()
       }
     }
@@ -275,13 +363,8 @@ pub fn PlcRuntime::execute_statement(
   }
 }
 
-///|
-/// 执行语句序列
-pub fn PlcRuntime::execute_statement_list(
-  self : PlcRuntime,
-  stmts : Array[Stmt],
-  delta_ms : Int64,
-) -> Unit {
+///| 执行语句序列
+pub fn PlcRuntime::execute_statement_list(self : PlcRuntime, stmts : Array[Stmt], delta_ms : Int64) -> Unit {
   for s in stmts {
     self.execute_statement(s, delta_ms)
   }
@@ -289,13 +372,7 @@ pub fn PlcRuntime::execute_statement_list(
 
 // ------------------- 扫描周期调度器 -------------------
 
-///|
-/// 执行一个完整的扫描周期 (Scan Cycle)
-///
-/// 1. 输入采样 (Input Scan): 外部映像保持就绪
-/// 2. 程序执行 (Execution): 运行 ST/LD 逻辑
-/// 3. 输出刷新 (Output Scan): 输出寄存器更新完毕
-/// 4. 周期时钟推进
+///| 执行一个完整的扫描周期 (Scan Cycle)
 pub fn PlcRuntime::step_cycle(self : PlcRuntime, delta_ms : Int64) -> Unit {
   if !self.is_running {
     return
