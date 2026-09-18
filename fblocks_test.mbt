@@ -1,5 +1,5 @@
-///|
-/// 测试 IEC 61131-3 标准功能块
+///| 测试 IEC 61131-3 标准与扩展功能块
+
 test "fblocks ton timer timing" {
   let ton = TonTimer::new()
 
@@ -24,7 +24,6 @@ test "fblocks ton timer timing" {
   assert_eq(ton.et, 0L)
 }
 
-///|
 test "fblocks ctu counter pulse counting" {
   let ctu = CtuCounter::new()
 
@@ -56,4 +55,86 @@ test "fblocks ctu counter pulse counting" {
   ctu.tick(false, true, 3)
   assert_eq(ctu.cv, 0)
   assert_eq(ctu.q, false)
+}
+
+test "fblocks sr and rs flip-flops" {
+  let sr = SrFlipFlop::new()
+  // 置位优先: S1=true, R=true 时 Q 应为 true
+  let q_sr = sr.tick(true, true)
+  assert_eq(q_sr, true)
+
+  // 复位: S1=false, R=true
+  let q_sr_rst = sr.tick(false, true)
+  assert_eq(q_sr_rst, false)
+
+  let rs = RsFlipFlop::new()
+  // 复位优先: S=true, R1=true 时 Q 应为 false
+  let q_rs = rs.tick(true, true)
+  assert_eq(q_rs, false)
+
+  // 单独置位: S=true, R1=false
+  let q_rs_set = rs.tick(true, false)
+  assert_eq(q_rs_set, true)
+}
+
+test "fblocks r_trig and f_trig edge detectors" {
+  let rtrig = RTrig::new()
+  // 低电平
+  assert_eq(rtrig.tick(false), false)
+  // 上升沿触发
+  assert_eq(rtrig.tick(true), true)
+  // 保持高电平，脉冲消失
+  assert_eq(rtrig.tick(true), false)
+  // 变低
+  assert_eq(rtrig.tick(false), false)
+
+  let ftrig = FTrig::new()
+  // 从低变高，不触发
+  assert_eq(ftrig.tick(true), false)
+  // 保持高
+  assert_eq(ftrig.tick(true), false)
+  // 下降沿触发
+  assert_eq(ftrig.tick(false), true)
+  // 保持低
+  assert_eq(ftrig.tick(false), false)
+}
+
+test "fblocks ctud bidirectional counter" {
+  let ctud = CtudCounter::new()
+  // 初始状态
+  assert_eq(ctud.cv, 0)
+  assert_eq(ctud.qd, true) // cv <= 0
+
+  // 向上计数脉冲
+  ctud.tick(true, false, false, false, 5)
+  assert_eq(ctud.cv, 1)
+  assert_eq(ctud.qd, false)
+
+  // 向下计数脉冲
+  ctud.tick(false, true, false, false, 5)
+  assert_eq(ctud.cv, 0)
+  assert_eq(ctud.qd, true)
+}
+
+test "fblocks tonr retentive timer" {
+  let tonr = TonrTimer::new()
+  // 累积计时 200ms
+  tonr.tick(true, false, 500L, 200L)
+  assert_eq(tonr.et, 200L)
+  assert_eq(tonr.q, false)
+
+  // 输入信号变低，但不复位 (保持 200ms)
+  tonr.tick(false, false, 500L, 100L)
+  assert_eq(tonr.et, 200L)
+  assert_eq(tonr.q, false)
+
+  // 再次使能，累积步进 350ms (总计 550ms >= 500ms)
+  tonr.tick(true, false, 500L, 350L)
+  assert_eq(tonr.et, 500L)
+  assert_eq(tonr.q, true)
+
+  // 复位
+  tonr.tick(false, true, 500L, 10L)
+  assert_eq(tonr.et, 0L)
+  assert_eq(tonr.q, false)
 }

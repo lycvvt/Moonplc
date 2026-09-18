@@ -171,7 +171,7 @@ pub(all) struct CtudCounter {
 } derive(Debug)
 
 pub fn CtudCounter::new() -> CtudCounter {
-  { cu_prev: false, cd_prev: false, pv: 0, cv: 0, qu: false, qd: false }
+  { cu_prev: false, cd_prev: false, pv: 0, cv: 0, qu: false, qd: true }
 }
 
 pub fn CtudCounter::tick(self : CtudCounter, cu_val : Bool, cd_val : Bool, r_val : Bool, ld_val : Bool, pv_val : Int) -> Unit {
