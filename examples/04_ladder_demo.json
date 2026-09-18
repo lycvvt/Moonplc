@@ -1,0 +1,29 @@
+{
+  "program": "Motor_Start_Stop",
+  "rungs": [
+    {
+      "id": 1,
+      "comment": "Motor self-holding circuit: (Start OR Motor) AND NOT Stop -> Motor",
+      "condition": {
+        "type": "Series",
+        "nodes": [
+          {
+            "type": "Parallel",
+            "nodes": [
+              { "type": "Contact", "mode": "NO", "variable": "Start_Btn" },
+              { "type": "Contact", "mode": "NO", "variable": "Motor_Run" }
+            ]
+          },
+          {
+            "type": "Contact",
+            "mode": "NC",
+            "variable": "Stop_Btn"
+          }
+        ]
+      },
+      "coils": [
+        { "mode": "Normal", "variable": "Motor_Run" }
+      ]
+    }
+  ]
+}

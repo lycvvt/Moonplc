@@ -1,0 +1,5 @@
+import {
+  "lycvvt/moonplc" @lib,
+}
+
+pkgtype(kind: "executable")

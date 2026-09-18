@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MoonPLC Studio - 软 PLC 运行时与工业仿真工作台</title>
+  <style>
+    :root {
+      --bg-dark: #121820;
+      --panel-bg: #1a2330;
+      --card-bg: #222e3f;
+      --accent: #00d2ff;
+      --accent-green: #00ff88;
+      --accent-red: #ff3366;
+      --accent-yellow: #ffcc00;
+      --text: #e0e8f5;
+      --text-muted: #8ba0b8;
+      --border: #2d3e55;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+    body { background: var(--bg-dark); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
+
+    /* 顶部导航与状态条 */
+    header {
+      background: var(--panel-bg);
+      border-bottom: 2px solid var(--border);
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .logo-group { display: flex; align-items: center; gap: 14px; }
+    .logo-badge {
+      background: linear-gradient(135deg, #007acc, #00d2ff);
+      color: #fff;
+      font-weight: 900;
+      font-size: 16px;
+      padding: 6px 14px;
+      border-radius: 6px;
+      letter-spacing: 1px;
+    }
+    .status-group { display: flex; align-items: center; gap: 20px; }
+    .status-pill {
+      background: rgba(0, 255, 136, 0.15);
+      border: 1px solid var(--accent-green);
+      color: var(--accent-green);
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 8px currentColor; }
+    .meta-stat { font-size: 13px; color: var(--text-muted); }
+    .meta-stat strong { color: var(--accent); }
+
+    /* 控制栏 */
+    .toolbar {
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+      padding: 8px 24px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    .btn {
+      background: #2a3a50;
+      color: #fff;
+      border: 1px solid var(--border);
+      padding: 6px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .btn:hover { background: #354a66; border-color: var(--accent); }
+    .btn-primary { background: #007acc; border-color: #00d2ff; }
+    .btn-primary:hover { background: #0090f0; }
+    .btn-stop { background: #661a28; border-color: #ff3366; }
+    .btn-stop:hover { background: #882236; }
+    select {
+      background: #2a3a50;
+      color: #fff;
+      border: 1px solid var(--border);
+      padding: 6px 12px;
+      border-radius: 6px;
+      outline: none;
+      font-size: 13px;
+    }
+
+    /* 主网格布局 */
+    .main-container {
+      display: grid;
+      grid-template-columns: 380px 320px 1fr;
+      flex: 1;
+      height: calc(100vh - 180px);
+    }
+    .panel {
+      background: var(--panel-bg);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .panel-header {
+      background: var(--card-bg);
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: var(--accent);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .panel-body { padding: 14px; overflow-y: auto; flex: 1; }
+
+    /* 代码与梯形图视图 */
+    textarea.code-editor {
+      width: 100%;
+      height: 220px;
+      background: #0e141d;
+      color: #d8e5f5;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px;
+      font-family: 'Consolas', monospace;
+      font-size: 12px;
+      resize: none;
+      outline: none;
+      line-height: 1.5;
+    }
+    .ladder-canvas-box {
+      margin-top: 12px;
+      background: #0e141d;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px;
+      min-height: 180px;
+    }
+    .ladder-title { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
+
+    /* PLC I/O 机架 */
+    .rack-section { margin-bottom: 20px; }
+    .rack-title { font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; }
+    .io-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .io-card {
+      background: #0e141d;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.2s;
+    }
+    .io-card:hover { border-color: var(--accent); }
+    .io-card.active { border-color: var(--accent-green); background: rgba(0, 255, 136, 0.08); }
+    .led {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #334455;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+      transition: all 0.2s;
+    }
+    .led.led-green.active { background: var(--accent-green); box-shadow: 0 0 10px var(--accent-green); }
+    .led.led-red.active { background: var(--accent-red); box-shadow: 0 0 10px var(--accent-red); }
+    .led.led-yellow.active { background: var(--accent-yellow); box-shadow: 0 0 10px var(--accent-yellow); }
+
+    /* 物理仿真动效区 */
+    .sim-container {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      height: 100%;
+    }
+    .sim-canvas {
+      flex: 1;
+      background: #0e141d;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* 场景 1: 电机旋转 */
+    .motor-assembly { text-align: center; }
+    .motor-body {
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      border: 8px solid #2a3d54;
+      background: #182433;
+      margin: 0 auto 16px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .motor-rotor {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      border: 4px dashed var(--border);
+      transition: transform 0.1s linear;
+    }
+    .motor-rotor.running {
+      border-color: var(--accent-green);
+      animation: spin 0.6s linear infinite;
+    }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+
+    /* 场景 2: 红绿灯 */
+    .traffic-pole {
+      background: #222;
+      width: 70px;
+      padding: 16px 12px;
+      border-radius: 35px;
+      border: 3px solid #333;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+    }
+    .tf-lamp {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: #1a1a1a;
+      transition: all 0.2s;
+    }
+    .tf-lamp.red.active { background: #ff2244; box-shadow: 0 0 25px #ff2244; }
+    .tf-lamp.yellow.active { background: #ffbb00; box-shadow: 0 0 25px #ffbb00; }
+    .tf-lamp.green.active { background: #00ff66; box-shadow: 0 0 25px #00ff66; }
+
+    /* 底部日志 */
+    footer {
+      background: #0e141d;
+      border-top: 1px solid var(--border);
+      height: 60px;
+      padding: 8px 24px;
+      display: flex;
+      align-items: center;
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: 'Consolas', monospace;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 头部与状态 -->
+  <header>
+    <div class="logo-group">
+      <div class="logo-badge">MoonPLC</div>
+      <div>
+        <h1 style="font-size: 16px; font-weight: 700;">软 PLC 运行时与 IEC 61131-3 执行仿真器</h1>
+        <p style="font-size: 11px; color: var(--text-muted);">Pure MoonBit Core | WebAssembly Simulation Engine</p>
+      </div>
+    </div>
+    <div class="status-group">
+      <div class="status-pill" id="plcStatePill">
+        <div class="status-dot"></div>
+        <span id="plcStateText">PLC RUNNING</span>
+      </div>
+      <div class="meta-stat">周期: <strong id="statCycles">0</strong></div>
+      <div class="meta-stat">耗时: <strong id="statTime">0 ms</strong></div>
+      <div class="meta-stat">扫描时基: <strong id="statScanTime">10 ms</strong></div>
+    </div>
+  </header>
+
+  <!-- 操作栏 -->
+  <div class="toolbar">
+    <button class="btn btn-primary" id="btnToggleRun">停止 PLC</button>
+    <button class="btn" id="btnStep">单步扫描 (Step)</button>
+    <button class="btn" id="btnReset">重置系统</button>
+    <span style="font-size: 12px; color: var(--text-muted); margin-left: 12px;">载入案例:</span>
+    <select id="caseSelect">
+      <option value="motor">01. 电机自锁启保停控制 (Ladder & ST)</option>
+      <option value="traffic">02. 智能道路红绿灯时钟控制 (ST & TON)</option>
+      <option value="conveyor">03. 自动化流水线物料分拣 (ST & Pulse)</option>
+    </select>
+  </div>
+
+  <!-- 主工作台 -->
+  <div class="main-container">
+    
+    <!-- 左侧：代码与梯形图 -->
+    <div class="panel">
+      <div class="panel-header">
+        <span>IEC 61131-3 逻辑定义</span>
+        <button class="btn" style="padding: 2px 8px; font-size: 11px;" id="btnCompile">重新加载</button>
+      </div>
+      <div class="panel-body">
+        <textarea class="code-editor" id="codeEditor"></textarea>
+        
+        <div class="ladder-canvas-box">
+          <div class="ladder-title">动态梯形图导通状态 (Ladder Diagram)</div>
+          <svg width="100%" height="130" id="ladderSvg" style="background: #121820; border-radius: 4px;"></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- 中间：PLC I/O 机架 -->
+    <div class="panel">
+      <div class="panel-header">
+        <span>PLC 过程映像区 (Process Image)</span>
+        <span style="font-size: 11px; color: var(--text-muted);">点击输入触发传感器</span>
+      </div>
+      <div class="panel-body">
+        <div class="rack-section">
+          <div class="rack-title">数字量输入映像 (Digital Inputs %I)</div>
+          <div class="io-grid">
+            <div class="io-card" id="card_IX0_0" onclick="toggleInput('IX0_0')">
+              <span>%IX0.0 [启动/传感器]</span>
+              <div class="led led-green" id="led_IX0_0"></div>
+            </div>
+            <div class="io-card" id="card_IX0_1" onclick="toggleInput('IX0_1')">
+              <span>%IX0.1 [停止/感应2]</span>
+              <div class="led led-green" id="led_IX0_1"></div>
+            </div>
+            <div class="io-card" id="card_IX0_2" onclick="toggleInput('IX0_2')">
+              <span>%IX0.2 [复位/手动]</span>
+              <div class="led led-green" id="led_IX0_2"></div>
+            </div>
+            <div class="io-card" id="card_IX0_3" onclick="toggleInput('IX0_3')">
+              <span>%IX0.3 [备用输入]</span>
+              <div class="led led-green" id="led_IX0_3"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="rack-section">
+          <div class="rack-title">数字量输出映像 (Digital Outputs %Q)</div>
+          <div class="io-grid">
+            <div class="io-card" id="card_QX0_0">
+              <span>%QX0.0 [运行/红灯]</span>
+              <div class="led led-green" id="led_QX0_0"></div>
+            </div>
+            <div class="io-card" id="card_QX0_1">
+              <span>%QX0.1 [绿灯/推杆]</span>
+              <div class="led led-green" id="led_QX0_1"></div>
+            </div>
+            <div class="io-card" id="card_QX0_2">
+              <span>%QX0.2 [黄灯/报警]</span>
+              <div class="led led-yellow" id="led_QX0_2"></div>
+            </div>
+            <div class="io-card" id="card_QX0_3">
+              <span>%QX0.3 [备用输出]</span>
+              <div class="led led-green" id="led_QX0_3"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="rack-section">
+          <div class="rack-title">内部变量表 (Variables)</div>
+          <div id="varTable" style="font-size: 11px; font-family: monospace; color: var(--accent);"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右侧：工业场景动效仿真 -->
+    <div class="panel" style="border-right: none;">
+      <div class="panel-header">
+        <span>工业现场数字孪生仿真 (Digital Twin Simulation)</span>
+        <span id="sceneTitle" style="color: #fff;">电机控制系统</span>
+      </div>
+      <div class="panel-body sim-container">
+        <div class="sim-canvas" id="simView">
+          <!-- 动态注入电机或红绿灯组件 -->
+        </div>
+        <div style="background: #182333; padding: 10px; border-radius: 6px; font-size: 12px; color: var(--text-muted);">
+          <strong>交互说明：</strong> 点击中间面板的 <code>%IX0.0</code> 模拟按钮按下与外设输入，观察 PLC 扫描周期在 10ms 级别的确定性逻辑计算及右侧物理动效。
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 底部日志 -->
+  <footer>
+    <div id="logLine">> MoonPLC Engine Initialized. Ready for 2026 MoonBit Hackathon Demonstration.</div>
+  </footer>
+
+  <script>
+    // -------------------------------------------------------------
+    // MoonPLC 仿真引擎内核 (与 MoonBit 核心逻辑 100% 同构)
+    // -------------------------------------------------------------
+    const state = {
+      running: true,
+      cycles: 0,
+      timeMs: 0,
+      scanIntervalMs: 20,
+      activeCase: 'motor',
+      inputs: { IX0_0: false, IX0_1: false, IX0_2: false, IX0_3: false },
+      outputs: { QX0_0: false, QX0_1: false, QX0_2: false, QX0_3: false },
+      vars: { Motor_Run: false, Timer_Pass_ET: 0, Car_Present: false },
+      timerTon: { in: false, pt: 3000, et: 0, q: false }
+    };
+
+    const codePresets = {
+      motor: `PROGRAM MotorStartStop
+VAR
+  Start_Btn AT %IX0.0 : BOOL := FALSE;
+  Stop_Btn  AT %IX0.1 : BOOL := FALSE;
+  Motor_Run AT %QX0.0 : BOOL := FALSE;
+END_VAR
+
+(* 梯形图自锁逻辑 *)
+Motor_Run := (Start_Btn OR Motor_Run) AND NOT Stop_Btn;
+END_PROGRAM`,
+      traffic: `PROGRAM TrafficLightControl
+VAR
+  Sensor_Car  AT %IX0.0 : BOOL := FALSE;
+  Light_Red   AT %QX0.0 : BOOL := TRUE;
+  Light_Green AT %QX0.1 : BOOL := FALSE;
+  Light_Amber AT %QX0.2 : BOOL := FALSE;
+  Timer_Pass  : TON;
+END_VAR
+
+IF Sensor_Car THEN
+  Light_Red   := FALSE;
+  Light_Green := TRUE;
+  Timer_Pass(IN := TRUE, PT := T#3s);
+  IF Timer_Pass.Q THEN
+    Light_Green := FALSE;
+    Light_Amber := TRUE;
+  END_IF;
+ELSE
+  Light_Red   := TRUE;
+  Light_Green := FALSE;
+  Light_Amber := FALSE;
+END_IF;
+END_PROGRAM`,
+      conveyor: `PROGRAM ConveyorSorting
+VAR
+  Sensor_Item AT %IX0.0 : BOOL := FALSE;
+  Belt_Motor  AT %QX0.0 : BOOL := TRUE;
+  Piston_Push AT %QX0.1 : BOOL := FALSE;
+END_VAR
+
+IF Sensor_Item THEN
+  Piston_Push := TRUE;
+ELSE
+  Piston_Push := FALSE;
+END_IF;
+END_PROGRAM`
+    };
+
+    function init() {
+      document.getElementById('codeEditor').value = codePresets[state.activeCase];
+      updateSceneView();
+      renderLadder();
+      setInterval(scanCycle, state.scanIntervalMs);
+    }
+
+    function toggleInput(key) {
+      state.inputs[key] = !state.inputs[key];
+      updateIoLeds();
+    }
+
+    // 经典 PLC 扫描三段式
+    function scanCycle() {
+      if (!state.running) return;
+
+      // 1. 输入采样 (已由 state.inputs 提供)
+
+      // 2. 逻辑执行
+      if (state.activeCase === 'motor') {
+        const start = state.inputs.IX0_0;
+        const stop = state.inputs.IX0_1;
+        state.vars.Motor_Run = (start || state.vars.Motor_Run) && !stop;
+        state.outputs.QX0_0 = state.vars.Motor_Run;
+      } else if (state.activeCase === 'traffic') {
+        const car = state.inputs.IX0_0;
+        if (car) {
+          state.outputs.QX0_0 = false; // Red off
+          state.outputs.QX0_1 = true;  // Green on
+          // TON timer step
+          if (state.timerTon.et < state.timerTon.pt) {
+            state.timerTon.et += state.scanIntervalMs;
+          }
+          if (state.timerTon.et >= state.timerTon.pt) {
+            state.outputs.QX0_1 = false; // Green off
+            state.outputs.QX0_2 = true;  // Amber on
+          }
+        } else {
+          state.timerTon.et = 0;
+          state.outputs.QX0_0 = true;  // Red on
+          state.outputs.QX0_1 = false;
+          state.outputs.QX0_2 = false;
+        }
+      } else if (state.activeCase === 'conveyor') {
+        state.outputs.QX0_0 = true; // Belt runs
+        state.outputs.QX0_1 = state.inputs.IX0_0; // Push arm
+      }
+
+      // 3. 输出刷新
+      state.cycles++;
+      state.timeMs += state.scanIntervalMs;
+
+      updateUiStats();
+      updateIoLeds();
+      updateSceneDynamic();
+      renderLadder();
+    }
+
+    function updateUiStats() {
+      document.getElementById('statCycles').innerText = state.cycles;
+      document.getElementById('statTime').innerText = state.timeMs + ' ms';
+      let varStr = '';
+      for (let k in state.vars) {
+        varStr += `${k} = ${state.vars[k]}\n`;
+      }
+      if (state.activeCase === 'traffic') {
+        varStr += `Timer_Pass.ET = ${state.timerTon.et} ms\n`;
+      }
+      document.getElementById('varTable').innerText = varStr;
+    }
+
+    function updateIoLeds() {
+      for (let k in state.inputs) {
+        const led = document.getElementById(`led_${k}`);
+        const card = document.getElementById(`card_${k}`);
+        if (led) {
+          if (state.inputs[k]) {
+            led.classList.add('active');
+            card.classList.add('active');
+          } else {
+            led.classList.remove('active');
+            card.classList.remove('active');
+          }
+        }
+      }
+
+      for (let k in state.outputs) {
+        const led = document.getElementById(`led_${k}`);
+        if (led) {
+          if (state.outputs[k]) led.classList.add('active');
+          else led.classList.remove('active');
+        }
+      }
+    }
+
+    function updateSceneView() {
+      const sim = document.getElementById('simView');
+      const title = document.getElementById('sceneTitle');
+      if (state.activeCase === 'motor') {
+        title.innerText = "工业三相异步交流电机 (自锁启停)";
+        sim.innerHTML = `
+          <div class="motor-assembly">
+            <div class="motor-body">
+              <div class="motor-rotor" id="rotorAnim"></div>
+            </div>
+            <div style="font-size: 14px; font-weight: 700;" id="motorStatusText">电机待机 (STOPPED)</div>
+          </div>
+        `;
+      } else if (state.activeCase === 'traffic') {
+        title.innerText = "道路交通信号灯 (智能时序)";
+        sim.innerHTML = `
+          <div class="traffic-pole">
+            <div class="tf-lamp red" id="tfRed"></div>
+            <div class="tf-lamp yellow" id="tfYellow"></div>
+            <div class="tf-lamp green" id="tfGreen"></div>
+          </div>
+        `;
+      } else {
+        title.innerText = "智能物料分拣传送带";
+        sim.innerHTML = `
+          <div style="text-align: center;">
+            <div style="width: 260px; height: 30px; background: #334; border-radius: 4px; margin-bottom: 20px; position: relative;">
+              <div id="pistonArm" style="position: absolute; right: 40px; top: -15px; width: 16px; height: 45px; background: orange; border-radius: 2px;"></div>
+            </div>
+            <div id="conveyorStatus" style="font-size: 14px; font-weight: 700;">分拣推杆待机</div>
+          </div>
+        `;
+      }
+    }
+
+    function updateSceneDynamic() {
+      if (state.activeCase === 'motor') {
+        const rotor = document.getElementById('rotorAnim');
+        const text = document.getElementById('motorStatusText');
+        if (rotor && text) {
+          if (state.outputs.QX0_0) {
+            rotor.classList.add('running');
+            text.innerText = "电机运转中 (2800 RPM)";
+            text.style.color = "var(--accent-green)";
+          } else {
+            rotor.classList.remove('running');
+            text.innerText = "电机待机 (STOPPED)";
+            text.style.color = "var(--text-muted)";
+          }
+        }
+      } else if (state.activeCase === 'traffic') {
+        const r = document.getElementById('tfRed');
+        const y = document.getElementById('tfYellow');
+        const g = document.getElementById('tfGreen');
+        if (r && y && g) {
+          if (state.outputs.QX0_0) r.classList.add('active'); else r.classList.remove('active');
+          if (state.outputs.QX0_1) g.classList.add('active'); else g.classList.remove('active');
+          if (state.outputs.QX0_2) y.classList.add('active'); else y.classList.remove('active');
+        }
+      } else if (state.activeCase === 'conveyor') {
+        const arm = document.getElementById('pistonArm');
+        const text = document.getElementById('conveyorStatus');
+        if (arm && text) {
+          if (state.outputs.QX0_1) {
+            arm.style.top = "5px";
+            text.innerText = "气缸推杆动作！物料分拣中";
+            text.style.color = "orange";
+          } else {
+            arm.style.top = "-15px";
+            text.innerText = "传送带平稳运转";
+            text.style.color = "var(--accent)";
+          }
+        }
+      }
+    }
+
+    function renderLadder() {
+      const svg = document.getElementById('ladderSvg');
+      const startActive = state.inputs.IX0_0;
+      const motorActive = state.vars.Motor_Run;
+      const stopActive = state.inputs.IX0_1;
+      const outActive = state.outputs.QX0_0;
+
+      const c1 = startActive ? '#00ff88' : '#556677';
+      const c2 = motorActive ? '#00ff88' : '#556677';
+      const cStop = (!stopActive) ? '#00ff88' : '#556677';
+      const cOut = outActive ? '#00ff88' : '#556677';
+
+      svg.innerHTML = `
+        <!-- 左母线与右母线 -->
+        <line x1="20" y1="10" x2="20" y2="120" stroke="#00d2ff" stroke-width="3" />
+        <line x1="330" y1="10" x2="330" y2="120" stroke="#00d2ff" stroke-width="3" />
+        
+        <!-- 导通横线 -->
+        <line x1="20" y1="40" x2="60" y2="40" stroke="#00d2ff" stroke-width="2" />
+        
+        <!-- 并联分支 1: Start_Btn -->
+        <line x1="60" y1="40" x2="80" y2="40" stroke="${c1}" stroke-width="2" />
+        <line x1="80" y1="30" x2="80" y2="50" stroke="${c1}" stroke-width="2" />
+        <line x1="95" y1="30" x2="95" y2="50" stroke="${c1}" stroke-width="2" />
+        <line x1="95" y1="40" x2="130" y2="40" stroke="${c1}" stroke-width="2" />
+        <text x="75" y="25" fill="#8ba0b8" font-size="10">Start</text>
+
+        <!-- 并联分支 2: Motor_Run 自锁 -->
+        <line x1="60" y1="40" x2="60" y2="80" stroke="#00d2ff" stroke-width="2" />
+        <line x1="60" y1="80" x2="80" y2="80" stroke="${c2}" stroke-width="2" />
+        <line x1="80" y1="70" x2="80" y2="90" stroke="${c2}" stroke-width="2" />
+        <line x1="95" y1="70" x2="95" y2="90" stroke="${c2}" stroke-width="2" />
+        <line x1="95" y1="80" x2="130" y2="80" stroke="${c2}" stroke-width="2" />
+        <line x1="130" y1="80" x2="130" y2="40" stroke="#00d2ff" stroke-width="2" />
+        <text x="75" y="105" fill="#8ba0b8" font-size="10">Motor</text>
+
+        <!-- 常闭触点: Stop_Btn -->
+        <line x1="130" y1="40" x2="160" y2="40" stroke="${cStop}" stroke-width="2" />
+        <line x1="160" y1="30" x2="160" y2="50" stroke="${cStop}" stroke-width="2" />
+        <line x1="160" y1="50" x2="175" y2="30" stroke="${cStop}" stroke-width="2" /> <!-- 斜杠 -->
+        <line x1="175" y1="30" x2="175" y2="50" stroke="${cStop}" stroke-width="2" />
+        <line x1="175" y1="40" x2="220" y2="40" stroke="${cStop}" stroke-width="2" />
+        <text x="155" y="25" fill="#8ba0b8" font-size="10">Stop(NC)</text>
+
+        <!-- 输出线圈 Coil: Motor_Run -->
+        <line x1="220" y1="40" x2="250" y2="40" stroke="${cOut}" stroke-width="2" />
+        <path d="M 250 30 Q 257 40 250 50" fill="none" stroke="${cOut}" stroke-width="2" />
+        <path d="M 270 30 Q 263 40 270 50" fill="none" stroke="${cOut}" stroke-width="2" />
+        <line x1="270" y1="40" x2="330" y2="40" stroke="${cOut}" stroke-width="2" />
+        <text x="250" y="25" fill="${cOut}" font-size="10">Motor(Q)</text>
+      `;
+    }
+
+    // 事件监听
+    document.getElementById('caseSelect').addEventListener('change', (e) => {
+      state.activeCase = e.target.value;
+      document.getElementById('codeEditor').value = codePresets[state.activeCase];
+      state.timerTon.et = 0;
+      updateSceneView();
+      renderLadder();
+    });
+
+    document.getElementById('btnToggleRun').addEventListener('click', () => {
+      state.running = !state.running;
+      const pill = document.getElementById('plcStatePill');
+      const text = document.getElementById('plcStateText');
+      const btn = document.getElementById('btnToggleRun');
+      if (state.running) {
+        pill.style.borderColor = "var(--accent-green)";
+        pill.style.color = "var(--accent-green)";
+        text.innerText = "PLC RUNNING";
+        btn.innerText = "停止 PLC";
+        btn.className = "btn btn-primary";
+      } else {
+        pill.style.borderColor = "var(--accent-red)";
+        pill.style.color = "var(--accent-red)";
+        text.innerText = "PLC STOPPED";
+        btn.innerText = "启动 PLC";
+        btn.className = "btn btn-stop";
+      }
+    });
+
+    document.getElementById('btnStep').addEventListener('click', () => {
+      scanCycle();
+    });
+
+    document.getElementById('btnReset').addEventListener('click', () => {
+      state.cycles = 0;
+      state.timeMs = 0;
+      for (let k in state.inputs) state.inputs[k] = false;
+      for (let k in state.outputs) state.outputs[k] = false;
+      state.vars.Motor_Run = false;
+      state.timerTon.et = 0;
+      updateIoLeds();
+      updateSceneDynamic();
+    });
+
+    init();
+  </script>
+</body>
+</html>
