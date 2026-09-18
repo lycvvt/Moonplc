@@ -168,7 +168,11 @@ fn main {
 - **源码文件**：[`examples/03_conveyor_sorting.st`](examples/03_conveyor_sorting.st)
 - **核心特点**：利用 `TP`（脉冲定时器）在物料触发光电传感器的瞬间输出固定宽度的气缸推杆动作，实现精准分拣与计数。
 
-### 示例 4: 梯形图 JSON 交换规范
+### 示例 4: 水箱恒温闭环 PID 控制系统 (Closed-Loop PID Tank)
+- **源码文件**：[`examples/05_pid_temperature_tank.st`](examples/05_pid_temperature_tank.st)
+- **核心特点**：展示工业连续过程控制中抗积分饱和、误差死区抑制与超温安全连锁保护机制。
+
+### 示例 5: 梯形图 JSON 交换规范
 - **源码文件**：[`examples/04_ladder_demo.json`](examples/04_ladder_demo.json)
 - **核心特点**：提供规范化的抽象语法梯级 JSON 定义，支持与现代 Web 前端、组态软件及工业 SCADA 系统双向数据交换。
 
@@ -191,9 +195,9 @@ moon test
 ```
 - **预期结果**：
   ```text
-  Total tests: 16, passed: 16, failed: 0.
+  Total tests: 32, passed: 32, failed: 0.
   ```
-  涵盖：数据类型编解码测试、ST 词法与语法分析测试、梯形图自锁电路编译测试、过程映像内存映射测试、TON/CTU 功能块时序测试、以及多周期扫描集成测试，全量 100% 绿色通过。
+  涵盖：数据类型编解码测试、ST 词法与语法分析测试、梯形图自锁电路编译测试、过程映像内存映射测试、TON/TOF/TP/TONR/CTU/CTUD 功能块测试、SR/RS 触发器、R_TRIG/F_TRIG 边沿检测、工业闭环 PID 控制器测试、Modbus 现场总线协议编解码测试、以及 IL 字节码虚拟机单步与跳转测试，全量 100% 绿色通过。
 
 ### 步骤 3: 终端工业仿真 CLI 运行复现
 ```bash
