@@ -9,20 +9,20 @@
 
 ---
 
-## 🎯 项目目标 (Project Objectives)
+## 项目目标 (Project Objectives)
 
 1. **破局工业软件垄断，探索下一代自主工控语言基础设施**：
    传统软 PLC（如西门子 S7、德国 CODESYS、倍福 TwinCAT）长期闭源且收费高昂，开源项目（如 OpenPLC/MATIEC）技术栈老旧且存在 C 语言固有的内存安全缺陷。MoonPLC 旨在利用 MoonBit 的强静态类型、内存安全与极速编译特性，探索现代高可靠语言在 OT（运营技术）与工业边缘计算控制系统中的应用。
 2. **轻量化 IEC 61131-3 工业语言子集编译器**：
    提供标准结构化文本（Structured Text, ST）与梯形图（Ladder Diagram, LD）的词法、语法解析与 AST 编译能力，支持将工业梯级布尔网络与复杂控制流转化为统一可执行中间表示。
 3. **确定性毫秒级扫描周期执行引擎 (Scan Cycle Engine)**：
-   严格还原工业控制器的核心调度机制——“输入采样（Input Scan）➔ 逻辑执行（Program Execution）➔ 输出刷新（Output Scan）”，内置看门狗（Watchdog）与时基调度器。
+   严格还原工业控制器的核心调度机制——“输入采样 (Input Scan) -> 逻辑执行 (Program Execution) -> 输出刷新 (Output Scan)”，内置看门狗 (Watchdog) 与时基调度器。
 4. **全平台仿真与教学实验环境**：
    高校与工程师无需安装数十 GB 的庞大工业软件，即可在 PC 终端（Native CLI）或现代浏览器（WebAssembly）中以微秒/毫秒时钟精确仿真一台虚拟 PLC，并观察发光 I/O 指示灯、动态高亮梯形图及电机/交通灯物理动效。
 
 ---
 
-## 📦 安装方式 (Installation)
+## 安装方式 (Installation)
 
 ### 1. 前置依赖准备
 确保本地安装有 Git 以及最新版的 MoonBit 工具链：
@@ -64,16 +64,18 @@ import {
 
 ---
 
-## 📖 使用方法 (Usage Guide)
+## 使用方法 (Usage Guide)
 
 ### 1. 命令行 CLI 交互仿真
 项目内置了丰富的工业控制仿真示例程序，可直接通过 `moon run` 启动：
 ```bash
 moon run cmd/main
 ```
-终端将输出 ANSI 工业字符画，并按周期时序连续执行：
+终端将输出工业控制界面，并按周期时序连续执行：
 - 电机启保停自锁控制（按钮输入、自锁锁存、停止复位全过程）。
 - 十字路口交通信号灯定时器延时翻转全过程。
+- 水箱闭环 PID 温度调节控制。
+- Modbus 现场总线数据读写通信。
 
 ### 2. 浏览器端 Web 工业数字孪生工作台 (MoonPLC Studio)
 无需搭建后端或复杂服务，直接在浏览器中打开前端界面：
@@ -88,7 +90,7 @@ moon run cmd/main
 - 打开后即可进入 SCADA 工业控制台：
   - 点击左侧下拉菜单切换案例（电机控制、智能交通灯、流水线推杆）。
   - 点击中间面板的 `%IX0.0` 模拟物理开关按下。
-  - 实时观察梯形图发光导通回路、I/O 机架 LED 灯以及右侧电机旋转/红绿灯交替动效！
+  - 实时观察梯形图发光导通回路、I/O 机架 LED 灯以及右侧电机旋转/红绿灯交替动效。
 
 ### 3. MoonBit 代码中调用 MoonPLC API
 在 MoonBit 代码中引入并驱动软 PLC 运行时：
@@ -132,7 +134,7 @@ fn main {
 
 ---
 
-## 💡 典型工业应用示例 (Examples)
+## 典型工业应用示例 (Examples)
 
 所有示例源码均保存在 `examples/` 目录中：
 
@@ -178,7 +180,7 @@ fn main {
 
 ---
 
-## 🔬 完整可复现的验证步骤 (Reproducibility)
+## 完整可复现的验证步骤 (Reproducibility)
 
 为了让大赛评委和开源社区开发者能够 100% 精确复现本项目的运行与测试结果，请依照以下步骤验证：
 
@@ -219,6 +221,20 @@ moon run cmd/main
   >> Car Arrives! Triggering %IX0.0 = TRUE
      [At 50ms]  RED = false | GREEN = true | AMBER = false
      [At 110ms] RED = false | GREEN = false | AMBER = true
+
+  [SCENARIO 3] Process Automation: Closed-Loop PID Temperature Control
+  >> Target Setpoint: 65.0°C | Initial Tank Temperature: 25.0°C
+     Step 1 | Heater Output = 81% | Tank Temp = 31°C
+     Step 2 | Heater Output = 98% | Tank Temp = 39°C
+     Step 3 | Heater Output = 85% | Tank Temp = 45°C
+     Step 4 | Heater Output = 76% | Tank Temp = 51°C
+     Step 5 | Heater Output = 67% | Tank Temp = 56°C
+
+  [SCENARIO 4] Fieldbus: Modbus TCP/RTU Protocol Telemetry
+  >> SCADA Host writes Coil 0 (%QX0.0) via Modbus FC 0x05
+     Response Error: false | %QX0.0 Status = true
+  >> SCADA Host writes Holding Register 40001 (%MW0) = 8848 via Modbus FC 0x06
+     Response Error: false | Written Value = 8848
   ```
 
 ### 步骤 4: Web 端数字孪生交互复现
@@ -228,11 +244,11 @@ moon run cmd/main
    - 梯形图上的 `Start_Btn` 触点即刻变绿发光。
    - `Motor_Run` 线圈接通，右侧三相交流电机开始高速旋转（2800 RPM 动效）。
 4. 再次点击 `%IX0.0` 取消按钮输入：电机依靠自锁常开触点维持平稳运转。
-5. 点击 `%IX0.1 [停止]`：电机即刻刹车停止，完全吻合工业现场电气控制行为！
+5. 点击 `%IX0.1 [停止]`：电机即刻刹车停止，完全吻合工业现场电气控制行为。
 
 ---
 
-## 🏛️ 系统架构图 (Architecture)
+## 系统架构图 (Architecture)
 
 ```mermaid
 graph TD
@@ -247,6 +263,9 @@ graph TD
     subgraph Core["运行时与执行引擎 (MoonPLC Core)"]
         AST --> Executor[AST 控制流与表达式求值]
         FB[标准功能块库 TON/TOF/TP/CTU] <--> Executor
+        PID[工业闭环 PID 控制器] <--> Executor
+        MB[Modbus 通信协议栈] <--> Scheduler
+        IL[IL 字节码虚拟机] <--> Executor
         
         subgraph Scheduler["周期调度器 (Scan Scheduler)"]
             P1[1. 输入采样 Input Scan] --> P2[2. 逻辑执行 Execution]
@@ -265,7 +284,7 @@ graph TD
 
 ---
 
-## 📁 项目工程目录 (Repository Structure)
+## 项目工程目录 (Repository Structure)
 
 ```
 Moonplc/
@@ -282,19 +301,25 @@ Moonplc/
 ├── ladder_test.mbt             # 梯形图单测
 ├── memory.mbt                  # 过程映像区与变量符号表
 ├── memory_test.mbt             # 内存映像单测
-├── fblocks.mbt                 # 工业标准功能块 (TON/TOF/TP/CTU)
+├── fblocks.mbt                 # 工业标准功能块 (TON/TOF/TP/CTU/SR/RS/R_TRIG/F_TRIG)
 ├── fblocks_test.mbt            # 功能块单测
+├── pid.mbt                     # 工业闭环 PID 控制器 (抗饱和/微分先行)
+├── pid_test.mbt                # PID 闭环恒温仿真测试
+├── modbus.mbt                  # 现场总线 Modbus 协议编解码与寄存器映射
+├── modbus_test.mbt             # Modbus 协议单测
+├── vm.mbt                      # IEC 61131-3 指令表 (IL) 字节码虚拟机
+├── vm_test.mbt                 # IL 虚拟机单测
 ├── runtime.mbt                 # 周期调度引擎与解释执行器
 ├── runtime_test.mbt            # 周期扫描集成测试
 ├── moonplc.mbt                 # 统一 Facade API
 ├── moonplc_test.mbt            # 端到端工作流测试
 ├── cmd/
 │   └── main/
-│       ├── main.mbt            # CLI 命令行仿真程序
+│       ├── main.mbt            # CLI 命令行仿真程序 (四大场景)
 │       └── moon.pkg
 ├── web/
 │   └── index.html              # 浏览器 SCADA 工业仿真控制台
-├── examples/                   # 典型工业案例
+├── examples/                   # 典型工业案例 (电机、红绿灯、流水线、恒温水箱)
 ├── PROPOSAL.md                 # 大赛项目申报说明书
 ├── .github/workflows/ci.yml    # GitHub Actions CI
 └── LICENSE                     # Apache-2.0
@@ -302,7 +327,7 @@ Moonplc/
 
 ---
 
-## 🏆 赛事信息与评审致谢
+## 赛事信息与评审致谢
 
 - **参赛项目**：MoonPLC —— 软 PLC 运行时与 IEC 61131-3 子集编译器
 - **参赛选手**：[@lycvvt](https://github.com/lycvvt)
@@ -311,6 +336,6 @@ Moonplc/
 
 ---
 
-## 📄 开源许可证 (License)
+## 开源许可证 (License)
 
 本项目基于 [Apache-2.0 License](LICENSE) 开源。
