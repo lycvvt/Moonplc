@@ -197,9 +197,9 @@ moon test
 ```
 - **预期结果**：
   ```text
-  Total tests: 32, passed: 32, failed: 0.
+  Total tests: 41, passed: 41, failed: 0.
   ```
-  涵盖：数据类型编解码测试、ST 词法与语法分析测试、梯形图自锁电路编译测试、过程映像内存映射测试、TON/TOF/TP/TONR/CTU/CTUD 功能块测试、SR/RS 触发器、R_TRIG/F_TRIG 边沿检测、工业闭环 PID 控制器测试、Modbus 现场总线协议编解码测试、以及 IL 字节码虚拟机单步与跳转测试，全量 100% 绿色通过。
+  涵盖：数据类型编解码测试、ST 词法与语法分析测试、梯形图自锁电路编译测试、过程映像内存映射测试、TON/TOF/TP/TONR/CTU/CTUD 功能块测试、SR/RS 触发器、R_TRIG/F_TRIG 边沿检测、工业闭环 PID 控制器测试、Modbus TCP/RTU 现场总线协议编解码与 CRC16 校验测试、ST-to-IL 字节码编译器与 IL 虚拟机单步与跳转测试、以及 50,000 周期高频扫描基准压力测试，全量 41 项 100% 绿色通过。
 
 ### 步骤 3: 终端工业仿真 CLI 运行复现
 ```bash
@@ -305,12 +305,17 @@ Moonplc/
 ├── fblocks_test.mbt            # 功能块单测
 ├── pid.mbt                     # 工业闭环 PID 控制器 (抗饱和/微分先行)
 ├── pid_test.mbt                # PID 闭环恒温仿真测试
-├── modbus.mbt                  # 现场总线 Modbus 协议编解码与寄存器映射
-├── modbus_test.mbt             # Modbus 协议单测
+├── modbus.mbt                  # 现场总线 Modbus TCP 协议编解码与寄存器映射
+├── modbus_test.mbt             # Modbus TCP 协议单测
+├── modbus_rtu.mbt              # Modbus RTU 物理帧编解码与 CRC16 校验
+├── modbus_rtu_test.mbt         # Modbus RTU 报文与校验单测
+├── compiler.mbt                # ST 到 IL 字节码编译器 (表达式/控制流)
+├── compiler_test.mbt           # 编译器与虚拟机联调单测
 ├── vm.mbt                      # IEC 61131-3 指令表 (IL) 字节码虚拟机
 ├── vm_test.mbt                 # IL 虚拟机单测
 ├── runtime.mbt                 # 周期调度引擎与解释执行器
 ├── runtime_test.mbt            # 周期扫描集成测试
+├── bench_test.mbt              # 50,000 周期高频扫描与总线基准压测套件
 ├── moonplc.mbt                 # 统一 Facade API
 ├── moonplc_test.mbt            # 端到端工作流测试
 ├── cmd/
@@ -320,6 +325,8 @@ Moonplc/
 ├── web/
 │   └── index.html              # 浏览器 SCADA 工业仿真控制台
 ├── examples/                   # 典型工业案例 (电机、红绿灯、流水线、恒温水箱)
+├── docs/
+│   └── ACCEPTANCE.md           # 黑客松结项验收自查报告
 ├── PROPOSAL.md                 # 大赛项目申报说明书
 ├── .github/workflows/ci.yml    # GitHub Actions CI
 └── LICENSE                     # Apache-2.0
