@@ -1,5 +1,5 @@
-///| 测试 Modbus 现场总线协议处理与 PLC 过程映像映射
-
+///|
+/// 测试 Modbus 现场总线协议处理与 PLC 过程映像映射
 test "modbus write and read single coil" {
   let mem = PlcMemory::new()
   let server = PlcModbusServer::new(mem, 1)
@@ -17,6 +17,7 @@ test "modbus write and read single coil" {
   assert_eq(resp_read.data[0], 1)
 }
 
+///|
 test "modbus read discrete inputs" {
   let mem = PlcMemory::new()
   let server = PlcModbusServer::new(mem, 1)
@@ -34,22 +35,34 @@ test "modbus read discrete inputs" {
   assert_eq(resp.data[2], 0) // %IX0.2 为 false
 }
 
+///|
 test "modbus write and read holding registers" {
   let mem = PlcMemory::new()
   let server = PlcModbusServer::new(mem, 1)
 
   // 写保持寄存器 4 (FC 0x06, 地址 4, 数值 1234)
-  let req_write = ModbusRequest::new(1, ModbusFunction::WriteSingleRegister, 4, 1234)
+  let req_write = ModbusRequest::new(
+    1,
+    ModbusFunction::WriteSingleRegister,
+    4,
+    1234,
+  )
   let resp_write = server.handle_request(req_write)
   assert_eq(resp_write.is_error, false)
 
   // 读保持寄存器 4 (FC 0x03, 地址 4, 数量 1)
-  let req_read = ModbusRequest::new(1, ModbusFunction::ReadHoldingRegisters, 4, 1)
+  let req_read = ModbusRequest::new(
+    1,
+    ModbusFunction::ReadHoldingRegisters,
+    4,
+    1,
+  )
   let resp_read = server.handle_request(req_read)
   assert_eq(resp_read.is_error, false)
   assert_eq(resp_read.data[0], 1234)
 }
 
+///|
 test "modbus illegal function exception" {
   let mem = PlcMemory::new()
   let server = PlcModbusServer::new(mem, 1)
