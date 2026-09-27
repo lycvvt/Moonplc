@@ -1,5 +1,5 @@
-///| 测试 IL 指令表虚拟机与字节码执行
-
+///|
+/// 测试 IL 指令表虚拟机与字节码执行
 test "vm boolean accumulator operations" {
   let mem = PlcMemory::new()
   mem.set_var("Start", PlcValue::Bool(true))
@@ -27,6 +27,7 @@ test "vm boolean accumulator operations" {
   assert_eq(mem.get_var("Motor").is_true(), true)
 }
 
+///|
 test "vm arithmetic accumulator operations" {
   let mem = PlcMemory::new()
   let vm = PlcVm::new(mem)
@@ -47,6 +48,7 @@ test "vm arithmetic accumulator operations" {
   assert_eq(mem.get_var("CalcResult").to_int(), 45)
 }
 
+///|
 test "vm conditional jump logic" {
   let mem = PlcMemory::new()
   mem.set_var("Condition", PlcValue::Bool(true))
