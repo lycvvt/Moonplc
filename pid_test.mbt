@@ -1,5 +1,5 @@
-///| 测试工业 PID 控制器闭环调节与收敛特性
-
+///|
+/// 测试工业 PID 控制器闭环调节与收敛特性
 test "pid proportional response and limits" {
   let pid = PidController::new(2.0, 0.0, 0.0) // 纯 P 调节, Kp=2.0
   pid.set_limits(0.0, 100.0)
@@ -13,6 +13,7 @@ test "pid proportional response and limits" {
   assert_eq(out_sat, 100.0)
 }
 
+///|
 test "pid deadband suppression" {
   let pid = PidController::new(2.0, 0.0, 0.0)
   pid.set_deadband(1.5) // 死区 1.5
@@ -26,6 +27,7 @@ test "pid deadband suppression" {
   assert_eq(out2, 4.0)
 }
 
+///|
 test "pid manual mode bumpless transfer" {
   let pid = PidController::new(1.0, 1000.0, 0.0)
   pid.set_manual(true, 45.0)
@@ -39,6 +41,7 @@ test "pid manual mode bumpless transfer" {
   assert_eq(pid.integral_acc, 45.0)
 }
 
+///|
 test "pid closed loop temperature tank convergence simulation" {
   // 模拟一阶惯性加热水箱: 一阶延迟 + 散热
   // PV(t) = PV(t-1) + (Heater_Power * 0.05) - (PV(t-1) - 20.0) * 0.02

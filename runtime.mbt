@@ -1,10 +1,11 @@
 ///| PLC 运行时执行引擎与扫描周期调度器 (Scan Cycle Scheduler)
 
-///| 运行时执行环境
+///|
+/// 运行时执行环境
 pub(all) struct PlcRuntime {
   mem : PlcMemory
   fb_instances : Map[String, FbInstance]
-  mut program : Option[Program]
+  mut program : Program?
 
   // 扫描周期状态统计
   mut cycle_count : Int64
@@ -14,7 +15,8 @@ pub(all) struct PlcRuntime {
   mut is_running : Bool
 } derive(Debug)
 
-///| 创建 PLC 运行时
+///|
+/// 创建 PLC 运行时
 pub fn PlcRuntime::new() -> PlcRuntime {
   {
     mem: PlcMemory::new(),
@@ -28,7 +30,8 @@ pub fn PlcRuntime::new() -> PlcRuntime {
   }
 }
 
-///| 加载程序 (POU) 并初始化变量
+///|
+/// 加载程序 (POU) 并初始化变量
 pub fn PlcRuntime::load_program(self : PlcRuntime, prog : Program) -> Unit {
   self.program = Some(prog)
 
@@ -41,7 +44,7 @@ pub fn PlcRuntime::load_program(self : PlcRuntime, prog : Program) -> Unit {
 
     match v.init_val {
       Some(val) => self.mem.set_var(v.name, val)
-      None => {
+      None =>
         // 默认零值
         if v.var_type == "BOOL" {
           self.mem.set_var(v.name, PlcValue::Bool(false))
@@ -72,36 +75,34 @@ pub fn PlcRuntime::load_program(self : PlcRuntime, prog : Program) -> Unit {
         } else if v.var_type == "F_TRIG" {
           self.fb_instances[v.name] = FbInstance::Ftrig(FTrig::new())
         }
-      }
     }
   }
 }
 
 // ------------------- 表达式求值器 -------------------
 
-///| 计算表达式的值
+///|
+/// 计算表达式的值
 pub fn PlcRuntime::eval_expr(self : PlcRuntime, expr : Expr) -> PlcValue {
   match expr {
     Expr::Literal(v) => v
     Expr::Variable(name) => self.mem.get_var(name)
     Expr::DirectAddress(addr) => self.mem.get_address_val(addr)
-    Expr::FieldAccess(inst_name, field) => {
+    Expr::FieldAccess(inst_name, field) =>
       match self.fb_instances.get(inst_name) {
         Some(fb) => fb.get_field(field)
         None => self.mem.get_var("\{inst_name}.\{field}")
       }
-    }
     Expr::Unary(op, sub_expr) => {
       let v = self.eval_expr(sub_expr)
       match op {
         UnaryOp::Not => PlcValue::Bool(!v.is_true())
-        UnaryOp::Neg => {
+        UnaryOp::Neg =>
           match v {
             PlcValue::Int(i) => PlcValue::Int(-i)
             PlcValue::Real(r) => PlcValue::Real(-r)
             _ => PlcValue::Null
           }
-        }
       }
     }
     Expr::Binary(left, op, right) => {
@@ -136,8 +137,13 @@ pub fn PlcRuntime::eval_expr(self : PlcRuntime, expr : Expr) -> PlcValue {
 
 // ------------------- 语句执行器 -------------------
 
-///| 执行单个语句
-pub fn PlcRuntime::execute_statement(self : PlcRuntime, stmt : Stmt, delta_ms : Int64) -> Unit {
+///|
+/// 执行单个语句
+pub fn PlcRuntime::execute_statement(
+  self : PlcRuntime,
+  stmt : Stmt,
+  delta_ms : Int64,
+) -> Unit {
   match stmt {
     Stmt::Assign(var_name, expr) => {
       let val = self.eval_expr(expr)
@@ -194,7 +200,7 @@ pub fn PlcRuntime::execute_statement(self : PlcRuntime, stmt : Stmt, delta_ms : 
       }
 
       match self.fb_instances.get(inst_name) {
-        Some(fb) => {
+        Some(fb) =>
           match fb {
             FbInstance::Ton(ton) => {
               let mut in_val = false
@@ -301,11 +307,17 @@ pub fn PlcRuntime::execute_statement(self : PlcRuntime, stmt : Stmt, delta_ms : 
               let mut pv_val = 0
               for pair in args {
                 let (k, expr) = pair
-                if k == "CU" || k == "cu" { cu_val = self.eval_expr(expr).is_true() }
-                else if k == "CD" || k == "cd" { cd_val = self.eval_expr(expr).is_true() }
-                else if k == "R" || k == "r" { r_val = self.eval_expr(expr).is_true() }
-                else if k == "LD" || k == "ld" { ld_val = self.eval_expr(expr).is_true() }
-                else if k == "PV" || k == "pv" { pv_val = self.eval_expr(expr).to_int() }
+                if k == "CU" || k == "cu" {
+                  cu_val = self.eval_expr(expr).is_true()
+                } else if k == "CD" || k == "cd" {
+                  cd_val = self.eval_expr(expr).is_true()
+                } else if k == "R" || k == "r" {
+                  r_val = self.eval_expr(expr).is_true()
+                } else if k == "LD" || k == "ld" {
+                  ld_val = self.eval_expr(expr).is_true()
+                } else if k == "PV" || k == "pv" {
+                  pv_val = self.eval_expr(expr).to_int()
+                }
               }
               ctud.tick(cu_val, cd_val, r_val, ld_val, pv_val)
               self.mem.set_var("\{inst_name}.QU", PlcValue::Bool(ctud.qu))
@@ -317,8 +329,11 @@ pub fn PlcRuntime::execute_statement(self : PlcRuntime, stmt : Stmt, delta_ms : 
               let mut r = false
               for pair in args {
                 let (k, expr) = pair
-                if k == "S1" || k == "s1" || k == "S" || k == "s" { s1 = self.eval_expr(expr).is_true() }
-                else if k == "R" || k == "r" { r = self.eval_expr(expr).is_true() }
+                if k == "S1" || k == "s1" || k == "S" || k == "s" {
+                  s1 = self.eval_expr(expr).is_true()
+                } else if k == "R" || k == "r" {
+                  r = self.eval_expr(expr).is_true()
+                }
               }
               let q = sr.tick(s1, r)
               self.mem.set_var("\{inst_name}.Q1", PlcValue::Bool(q))
@@ -329,8 +344,11 @@ pub fn PlcRuntime::execute_statement(self : PlcRuntime, stmt : Stmt, delta_ms : 
               let mut r1 = false
               for pair in args {
                 let (k, expr) = pair
-                if k == "S" || k == "s" { s = self.eval_expr(expr).is_true() }
-                else if k == "R1" || k == "r1" || k == "R" || k == "r" { r1 = self.eval_expr(expr).is_true() }
+                if k == "S" || k == "s" {
+                  s = self.eval_expr(expr).is_true()
+                } else if k == "R1" || k == "r1" || k == "R" || k == "r" {
+                  r1 = self.eval_expr(expr).is_true()
+                }
               }
               let q = rs.tick(s, r1)
               self.mem.set_var("\{inst_name}.Q1", PlcValue::Bool(q))
@@ -340,7 +358,9 @@ pub fn PlcRuntime::execute_statement(self : PlcRuntime, stmt : Stmt, delta_ms : 
               let mut clk = false
               for pair in args {
                 let (k, expr) = pair
-                if k == "CLK" || k == "clk" { clk = self.eval_expr(expr).is_true() }
+                if k == "CLK" || k == "clk" {
+                  clk = self.eval_expr(expr).is_true()
+                }
               }
               let q = rtrig.tick(clk)
               self.mem.set_var("\{inst_name}.Q", PlcValue::Bool(q))
@@ -349,13 +369,14 @@ pub fn PlcRuntime::execute_statement(self : PlcRuntime, stmt : Stmt, delta_ms : 
               let mut clk = false
               for pair in args {
                 let (k, expr) = pair
-                if k == "CLK" || k == "clk" { clk = self.eval_expr(expr).is_true() }
+                if k == "CLK" || k == "clk" {
+                  clk = self.eval_expr(expr).is_true()
+                }
               }
               let q = ftrig.tick(clk)
               self.mem.set_var("\{inst_name}.Q", PlcValue::Bool(q))
             }
           }
-        }
         None => ()
       }
     }
@@ -363,8 +384,13 @@ pub fn PlcRuntime::execute_statement(self : PlcRuntime, stmt : Stmt, delta_ms : 
   }
 }
 
-///| 执行语句序列
-pub fn PlcRuntime::execute_statement_list(self : PlcRuntime, stmts : Array[Stmt], delta_ms : Int64) -> Unit {
+///|
+/// 执行语句序列
+pub fn PlcRuntime::execute_statement_list(
+  self : PlcRuntime,
+  stmts : Array[Stmt],
+  delta_ms : Int64,
+) -> Unit {
   for s in stmts {
     self.execute_statement(s, delta_ms)
   }
@@ -372,7 +398,8 @@ pub fn PlcRuntime::execute_statement_list(self : PlcRuntime, stmts : Array[Stmt]
 
 // ------------------- 扫描周期调度器 -------------------
 
-///| 执行一个完整的扫描周期 (Scan Cycle)
+///|
+/// 执行一个完整的扫描周期 (Scan Cycle)
 pub fn PlcRuntime::step_cycle(self : PlcRuntime, delta_ms : Int64) -> Unit {
   if !self.is_running {
     return

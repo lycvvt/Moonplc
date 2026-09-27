@@ -1,28 +1,34 @@
 ///| 工业闭环控制算法：PID 控制器功能块 (PID Controller)
 
-///| 工业 PID 控制器结构
+///|
+/// 工业 PID 控制器结构
 pub(all) struct PidController {
   // 调节参数
-  mut kp : Double           // 比例增益 (Proportional Gain)
-  mut ti_ms : Double        // 积分时间 (Integral Time Constant in ms)
-  mut td_ms : Double        // 微分时间 (Derivative Time Constant in ms)
-  mut out_min : Double      // 控制量下限限幅
-  mut out_max : Double      // 控制量上限限幅
-  mut deadband : Double     // 误差死区
+  mut kp : Double // 比例增益 (Proportional Gain)
+  mut ti_ms : Double // 积分时间 (Integral Time Constant in ms)
+  mut td_ms : Double // 微分时间 (Derivative Time Constant in ms)
+  mut out_min : Double // 控制量下限限幅
+  mut out_max : Double // 控制量上限限幅
+  mut deadband : Double // 误差死区
 
   // 状态变量
   mut integral_acc : Double // 积分累加量
-  mut prev_pv : Double      // 上周期被控量 (用于微分先行)
-  mut prev_error : Double   // 上周期误差
-  mut manual : Bool         // 手/自动模式切换 (true=手动, false=自动)
-  mut manual_val : Double   // 手动开度给定
+  mut prev_pv : Double // 上周期被控量 (用于微分先行)
+  mut prev_error : Double // 上周期误差
+  mut manual : Bool // 手/自动模式切换 (true=手动, false=自动)
+  mut manual_val : Double // 手动开度给定
 
   // 输出
-  mut output : Double       // 当前计算控制输出 (MV - Manipulated Variable)
+  mut output : Double // 当前计算控制输出 (MV - Manipulated Variable)
 } derive(Debug)
 
-///| 创建默认工业 PID 控制器
-pub fn PidController::new(kp : Double, ti_ms : Double, td_ms : Double) -> PidController {
+///|
+/// 创建默认工业 PID 控制器
+pub fn PidController::new(
+  kp : Double,
+  ti_ms : Double,
+  td_ms : Double,
+) -> PidController {
   {
     kp,
     ti_ms,
@@ -39,19 +45,30 @@ pub fn PidController::new(kp : Double, ti_ms : Double, td_ms : Double) -> PidCon
   }
 }
 
-///| 设置输出限幅区间
-pub fn PidController::set_limits(self : PidController, min_val : Double, max_val : Double) -> Unit {
+///|
+/// 设置输出限幅区间
+pub fn PidController::set_limits(
+  self : PidController,
+  min_val : Double,
+  max_val : Double,
+) -> Unit {
   self.out_min = min_val
   self.out_max = max_val
 }
 
-///| 设置误差死区
+///|
+/// 设置误差死区
 pub fn PidController::set_deadband(self : PidController, db : Double) -> Unit {
   self.deadband = db
 }
 
-///| 手动/自动模式无扰切换 (Bumpless Transfer)
-pub fn PidController::set_manual(self : PidController, manual_mode : Bool, man_val : Double) -> Unit {
+///|
+/// 手动/自动模式无扰切换 (Bumpless Transfer)
+pub fn PidController::set_manual(
+  self : PidController,
+  manual_mode : Bool,
+  man_val : Double,
+) -> Unit {
   self.manual = manual_mode
   self.manual_val = man_val
   if self.manual {
@@ -61,8 +78,14 @@ pub fn PidController::set_manual(self : PidController, manual_mode : Bool, man_v
   }
 }
 
-///| PID 周期执行计算 (按采样周期 dt 毫秒计算输出)
-pub fn PidController::compute(self : PidController, sp : Double, pv : Double, dt_ms : Double) -> Double {
+///|
+/// PID 周期执行计算 (按采样周期 dt 毫秒计算输出)
+pub fn PidController::compute(
+  self : PidController,
+  sp : Double,
+  pv : Double,
+  dt_ms : Double,
+) -> Double {
   if self.manual {
     self.output = self.manual_val
     return self.output
@@ -84,7 +107,7 @@ pub fn PidController::compute(self : PidController, sp : Double, pv : Double, dt
 
   // 3. 积分项 (I) 带抗积分饱和 (Anti-Windup)
   if self.ti_ms > 0.0 {
-    let delta_i = (self.kp * (dt / self.ti_ms)) * error
+    let delta_i = self.kp * (dt / self.ti_ms) * error
     // 只有在输出未饱和或反向纠偏时才累加积分
     let next_i = self.integral_acc + delta_i
     if next_i >= self.out_min && next_i <= self.out_max {

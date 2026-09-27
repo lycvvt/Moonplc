@@ -1,5 +1,5 @@
-///| 测试 IEC 61131-3 标准与扩展功能块
-
+///|
+/// 测试 IEC 61131-3 标准与扩展功能块
 test "fblocks ton timer timing" {
   let ton = TonTimer::new()
 
@@ -24,6 +24,7 @@ test "fblocks ton timer timing" {
   assert_eq(ton.et, 0L)
 }
 
+///|
 test "fblocks ctu counter pulse counting" {
   let ctu = CtuCounter::new()
 
@@ -57,6 +58,7 @@ test "fblocks ctu counter pulse counting" {
   assert_eq(ctu.q, false)
 }
 
+///|
 test "fblocks sr and rs flip-flops" {
   let sr = SrFlipFlop::new()
   // 置位优先: S1=true, R=true 时 Q 应为 true
@@ -77,6 +79,7 @@ test "fblocks sr and rs flip-flops" {
   assert_eq(q_rs_set, true)
 }
 
+///|
 test "fblocks r_trig and f_trig edge detectors" {
   let rtrig = RTrig::new()
   // 低电平
@@ -99,6 +102,7 @@ test "fblocks r_trig and f_trig edge detectors" {
   assert_eq(ftrig.tick(false), false)
 }
 
+///|
 test "fblocks ctud bidirectional counter" {
   let ctud = CtudCounter::new()
   // 初始状态
@@ -116,6 +120,7 @@ test "fblocks ctud bidirectional counter" {
   assert_eq(ctud.qd, true)
 }
 
+///|
 test "fblocks tonr retentive timer" {
   let tonr = TonrTimer::new()
   // 累积计时 200ms
