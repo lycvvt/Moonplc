@@ -3,6 +3,7 @@
 [![CI](https://github.com/lycvvt/Moonplc/actions/workflows/ci.yml/badge.svg)](https://github.com/lycvvt/Moonplc/actions)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![MoonBit](https://img.shields.io/badge/Language-MoonBit-purple.svg)](https://www.moonbitlang.com/)
+[![Mooncakes](https://img.shields.io/badge/mooncakes.io-lycvvt%2Fmoonplc-orange.svg)](https://mooncakes.io/docs/#/lycvvt/moonplc/)
 [![Hackathon](https://img.shields.io/badge/Event-MoonBit%20Hackathon%202026-brightgreen.svg)](https://moonbitlang.github.io/Hackathon2026/)
 
 **MoonPLC** 是专为 **2026 MoonBit 黑客松** 设计的工业软件基础设施项目：采用 100% 纯 MoonBit 实现的轻量级微型软 PLC 运行时（Soft PLC Runtime）与 IEC 61131-3 工业标准编程语言（结构化文本 ST + 梯形图 LD）编译器，配备毫秒级确定性周期扫描引擎与浏览器端 WebAssembly 工业数字孪生仿真工作台。
@@ -289,39 +290,41 @@ graph TD
 ```
 Moonplc/
 ├── moon.mod                    # MoonBit 模块定义
-├── moon.pkg                    # 核心库包配置
+├── moon.pkg                    # 核心库包配置 (零告警选项)
+├── pkg.generated.mbti          # 自动生成的标准公共接口定义
 ├── types.mbt                   # IEC 基础类型与 %IX 寻址表示
-├── types_test.mbt              # 类型单测
+├── types_wbtest.mbt            # 类型白盒单测
 ├── ast.mbt                     # ST 抽象语法树
 ├── lexer.mbt                   # 词法分析器
-├── lexer_test.mbt              # 词法分析单测
+├── lexer_wbtest.mbt            # 词法分析白盒单测
 ├── parser.mbt                  # 递归下降语法解析器
-├── parser_test.mbt             # 语法解析单测
+├── parser_wbtest.mbt           # 语法解析白盒单测
 ├── ladder.mbt                  # 梯形图数据结构与转 AST 引擎
-├── ladder_test.mbt             # 梯形图单测
+├── ladder_wbtest.mbt           # 梯形图白盒单测
 ├── memory.mbt                  # 过程映像区与变量符号表
-├── memory_test.mbt             # 内存映像单测
+├── memory_wbtest.mbt           # 内存映像白盒单测
 ├── fblocks.mbt                 # 工业标准功能块 (TON/TOF/TP/CTU/SR/RS/R_TRIG/F_TRIG)
-├── fblocks_test.mbt            # 功能块单测
+├── fblocks_wbtest.mbt          # 功能块白盒单测
 ├── pid.mbt                     # 工业闭环 PID 控制器 (抗饱和/微分先行)
-├── pid_test.mbt                # PID 闭环恒温仿真测试
+├── pid_wbtest.mbt              # PID 闭环恒温仿真测试
 ├── modbus.mbt                  # 现场总线 Modbus TCP 协议编解码与寄存器映射
-├── modbus_test.mbt             # Modbus TCP 协议单测
+├── modbus_wbtest.mbt           # Modbus TCP 协议白盒单测
 ├── modbus_rtu.mbt              # Modbus RTU 物理帧编解码与 CRC16 校验
-├── modbus_rtu_test.mbt         # Modbus RTU 报文与校验单测
+├── modbus_rtu_wbtest.mbt       # Modbus RTU 报文与校验白盒单测
 ├── compiler.mbt                # ST 到 IL 字节码编译器 (表达式/控制流)
-├── compiler_test.mbt           # 编译器与虚拟机联调单测
+├── compiler_wbtest.mbt         # 编译器与虚拟机联调白盒单测
 ├── vm.mbt                      # IEC 61131-3 指令表 (IL) 字节码虚拟机
-├── vm_test.mbt                 # IL 虚拟机单测
+├── vm_wbtest.mbt               # IL 虚拟机白盒单测
 ├── runtime.mbt                 # 周期调度引擎与解释执行器
-├── runtime_test.mbt            # 周期扫描集成测试
-├── bench_test.mbt              # 50,000 周期高频扫描与总线基准压测套件
+├── runtime_wbtest.mbt          # 周期扫描集成白盒测试
+├── bench_wbtest.mbt            # 50,000 周期高频扫描与总线基准压测套件
 ├── moonplc.mbt                 # 统一 Facade API
-├── moonplc_test.mbt            # 端到端工作流测试
+├── moonplc_wbtest.mbt          # 端到端工作流白盒测试
 ├── cmd/
 │   └── main/
 │       ├── main.mbt            # CLI 命令行仿真程序 (四大场景)
-│       └── moon.pkg
+│       ├── moon.pkg
+│       └── pkg.generated.mbti
 ├── web/
 │   └── index.html              # 浏览器 SCADA 工业仿真控制台
 ├── examples/                   # 典型工业案例 (电机、红绿灯、流水线、恒温水箱)

@@ -1,0 +1,512 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "lycvvt/moonplc"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn compile_expr(Expr, Array[IlInstruction]) -> Unit
+
+pub fn compile_st_program(Program) -> Array[IlInstruction]
+
+pub fn compile_statement(Stmt, Array[IlInstruction]) -> Unit
+
+pub fn crc16_modbus(Array[Int]) -> Int
+
+pub fn encode_rtu_request(Int, Int, Int, Int) -> Array[Int]
+
+pub fn encode_rtu_response(ModbusResponse) -> Array[Int]
+
+pub fn ladder_node_to_expr(LadderNode) -> Expr
+
+pub fn parse_plc_address(String) -> PlcAddress?
+
+pub fn parse_rtu_frame(Array[Int]) -> ModbusRequest?
+
+pub fn parse_uint_simple(String) -> Int
+
+pub fn rung_to_stmts(Rung) -> Array[Stmt]
+
+pub fn version() -> String
+
+// Errors
+
+// Types and methods
+pub(all) enum BinaryOp {
+  Add
+  Sub
+  Mul
+  Div
+  Mod
+  Eq
+  Neq
+  Lt
+  Lte
+  Gt
+  Gte
+  And
+  Or
+  Xor
+} derive(Eq, @debug.Debug)
+
+pub(all) enum Coil {
+  Normal(String)
+  Set(String)
+  Reset(String)
+  DirectCoil(PlcAddress)
+} derive(Eq, @debug.Debug)
+
+pub(all) enum Contact {
+  NormallyOpen(String)
+  NormallyClosed(String)
+  DirectNO(PlcAddress)
+  DirectNC(PlcAddress)
+  RisingEdgeContact(String)
+  FallingEdgeContact(String)
+  CompareContact(String, BinaryOp, Int)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct CtuCounter {
+  mut cu_prev : Bool
+  mut pv : Int
+  mut cv : Int
+  mut q : Bool
+} derive(@debug.Debug)
+pub fn CtuCounter::new() -> Self
+pub fn CtuCounter::tick(Self, Bool, Bool, Int) -> Unit
+
+pub(all) struct CtudCounter {
+  mut cu_prev : Bool
+  mut cd_prev : Bool
+  mut pv : Int
+  mut cv : Int
+  mut qu : Bool
+  mut qd : Bool
+} derive(@debug.Debug)
+pub fn CtudCounter::new() -> Self
+pub fn CtudCounter::tick(Self, Bool, Bool, Bool, Bool, Int) -> Unit
+
+pub(all) enum Expr {
+  Literal(PlcValue)
+  Variable(String)
+  DirectAddress(PlcAddress)
+  Binary(Expr, BinaryOp, Expr)
+  Unary(UnaryOp, Expr)
+  FieldAccess(String, String)
+} derive(@debug.Debug)
+
+pub(all) struct FTrig {
+  mut clk_prev : Bool
+  mut q : Bool
+} derive(@debug.Debug)
+pub fn FTrig::new() -> Self
+pub fn FTrig::tick(Self, Bool) -> Bool
+
+pub(all) enum FbInstance {
+  Ton(TonTimer)
+  Tof(TofTimer)
+  Tp(TpTimer)
+  Tonr(TonrTimer)
+  Ctu(CtuCounter)
+  Ctud(CtudCounter)
+  Sr(SrFlipFlop)
+  Rs(RsFlipFlop)
+  Rtrig(RTrig)
+  Ftrig(FTrig)
+} derive(@debug.Debug)
+pub fn FbInstance::get_field(Self, String) -> PlcValue
+
+pub(all) struct IlInstruction {
+  opcode : IlOpcode
+  operand_val : PlcValue?
+  operand_var : String?
+} derive(@debug.Debug)
+pub fn IlInstruction::new(IlOpcode) -> Self
+pub fn IlInstruction::with_val(IlOpcode, PlcValue) -> Self
+pub fn IlInstruction::with_var(IlOpcode, String) -> Self
+
+pub(all) enum IlOpcode {
+  Ld
+  Ldn
+  St
+  And
+  Andn
+  Or
+  Orn
+  Xor
+  Add
+  Sub
+  Mul
+  Div
+  Mod
+  Eq
+  Ne
+  Gt
+  Lt
+  Ge
+  Le
+  Jmp(Int)
+  Jmpc(Int)
+  Jmpcn(Int)
+  Halt
+} derive(Eq, @debug.Debug)
+
+pub(all) struct LadderDiagram {
+  name : String
+  rungs : Array[Rung]
+} derive(@debug.Debug)
+pub fn LadderDiagram::add_rung(Self, Rung) -> Unit
+pub fn LadderDiagram::new(String) -> Self
+pub fn LadderDiagram::to_program(Self) -> Program
+
+pub(all) enum LadderNode {
+  Leaf(Contact)
+  Series(Array[LadderNode])
+  Parallel(Array[LadderNode])
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Lexer {
+  chars : Array[Char]
+  len : Int
+  mut pos : Int
+} derive(@debug.Debug)
+pub fn Lexer::new(String) -> Self
+pub fn Lexer::next_token(Self) -> Token
+pub fn Lexer::tokenize(Self) -> Array[Token]
+
+pub(all) enum ModbusException {
+  IllegalFunction
+  IllegalDataAddress
+  IllegalDataValue
+  SlaveDeviceFailure
+} derive(Eq, @debug.Debug)
+
+pub(all) enum ModbusFunction {
+  ReadCoils
+  ReadDiscreteInputs
+  ReadHoldingRegisters
+  ReadInputRegisters
+  WriteSingleCoil
+  WriteSingleRegister
+  WriteMultipleRegisters
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn ModbusFunction::from_int(Int) -> Self
+pub fn ModbusFunction::to_int(Self) -> Int
+
+pub(all) struct ModbusRequest {
+  slave_id : Int
+  function_code : ModbusFunction
+  address : Int
+  quantity : Int
+  values : Array[Int]
+} derive(@debug.Debug)
+pub fn ModbusRequest::new(Int, ModbusFunction, Int, Int) -> Self
+
+pub(all) struct ModbusResponse {
+  slave_id : Int
+  function_code : ModbusFunction
+  is_error : Bool
+  exception_code : ModbusException?
+  byte_count : Int
+  data : Array[Int]
+} derive(@debug.Debug)
+
+pub(all) struct MoonPlc {
+  runtime : PlcRuntime
+  name : String
+} derive(@debug.Debug)
+pub fn MoonPlc::current_time_ms(Self) -> Int64
+pub fn MoonPlc::cycle(Self, Int64) -> Unit
+pub fn MoonPlc::cycle_count(Self) -> Int64
+pub fn MoonPlc::dump_status(Self) -> String
+pub fn MoonPlc::get_output_bool(Self, String) -> Bool
+pub fn MoonPlc::get_var(Self, String) -> PlcValue
+pub fn MoonPlc::load_ladder(Self, LadderDiagram) -> Unit
+pub fn MoonPlc::load_st(Self, String) -> Unit
+pub fn MoonPlc::new(String) -> Self
+pub fn MoonPlc::run_cycles(Self, Int, Int64) -> Unit
+pub fn MoonPlc::set_input_bool(Self, String, Bool) -> Unit
+pub fn MoonPlc::set_var(Self, String, PlcValue) -> Unit
+
+pub(all) struct Parser {
+  tokens : Array[Token]
+  len : Int
+  mut pos : Int
+} derive(@debug.Debug)
+pub fn Parser::from_source(String) -> Self
+pub fn Parser::new(Array[Token]) -> Self
+pub fn Parser::parse_expr(Self) -> Expr
+pub fn Parser::parse_program(Self) -> Program
+pub fn Parser::parse_statement(Self) -> Stmt
+pub fn Parser::parse_statement_list(Self) -> Array[Stmt]
+pub fn Parser::parse_var_block(Self) -> Array[VarDecl]
+pub fn Parser::peek_next(Self) -> Token
+
+pub(all) struct PidController {
+  mut kp : Double
+  mut ti_ms : Double
+  mut td_ms : Double
+  mut out_min : Double
+  mut out_max : Double
+  mut deadband : Double
+  mut integral_acc : Double
+  mut prev_pv : Double
+  mut prev_error : Double
+  mut manual : Bool
+  mut manual_val : Double
+  mut output : Double
+} derive(@debug.Debug)
+pub fn PidController::compute(Self, Double, Double, Double) -> Double
+pub fn PidController::new(Double, Double, Double) -> Self
+pub fn PidController::set_deadband(Self, Double) -> Unit
+pub fn PidController::set_limits(Self, Double, Double) -> Unit
+pub fn PidController::set_manual(Self, Bool, Double) -> Unit
+
+pub(all) struct PlcAddress {
+  area : PlcArea
+  size : PlcDataSize
+  byte_offset : Int
+  bit_offset : Int
+} derive(Eq, @debug.Debug)
+pub fn PlcAddress::to_key(Self) -> String
+
+pub(all) enum PlcArea {
+  Input
+  Output
+  Memory
+} derive(Eq, @debug.Debug)
+
+pub(all) enum PlcDataSize {
+  Bit
+  Byte
+  Word
+  DWord
+} derive(Eq, @debug.Debug)
+
+pub(all) struct PlcMemory {
+  inputs : Map[String, PlcValue]
+  outputs : Map[String, PlcValue]
+  flags : Map[String, PlcValue]
+  vars : Map[String, PlcValue]
+  var_bindings : Map[String, PlcAddress]
+} derive(@debug.Debug)
+pub fn PlcMemory::bind_variable(Self, String, PlcAddress) -> Unit
+pub fn PlcMemory::dump_io(Self) -> String
+pub fn PlcMemory::get_address_val(Self, PlcAddress) -> PlcValue
+pub fn PlcMemory::get_output_bool(Self, String) -> Bool
+pub fn PlcMemory::get_var(Self, String) -> PlcValue
+pub fn PlcMemory::new() -> Self
+pub fn PlcMemory::reset(Self) -> Unit
+pub fn PlcMemory::set_address_val(Self, PlcAddress, PlcValue) -> Unit
+pub fn PlcMemory::set_input_bool(Self, String, Bool) -> Unit
+pub fn PlcMemory::set_var(Self, String, PlcValue) -> Unit
+
+pub(all) struct PlcModbusServer {
+  mem : PlcMemory
+  slave_id : Int
+} derive(@debug.Debug)
+pub fn PlcModbusServer::handle_request(Self, ModbusRequest) -> ModbusResponse
+pub fn PlcModbusServer::new(PlcMemory, Int) -> Self
+
+pub(all) struct PlcRuntime {
+  mem : PlcMemory
+  fb_instances : Map[String, FbInstance]
+  mut program : Program?
+  mut cycle_count : Int64
+  mut current_time_ms : Int64
+  mut scan_time_us : Int64
+  mut watchdog_ms : Int64
+  mut is_running : Bool
+} derive(@debug.Debug)
+pub fn PlcRuntime::eval_expr(Self, Expr) -> PlcValue
+pub fn PlcRuntime::execute_statement(Self, Stmt, Int64) -> Unit
+pub fn PlcRuntime::execute_statement_list(Self, Array[Stmt], Int64) -> Unit
+pub fn PlcRuntime::load_program(Self, Program) -> Unit
+pub fn PlcRuntime::new() -> Self
+pub fn PlcRuntime::step_cycle(Self, Int64) -> Unit
+
+pub(all) enum PlcValue {
+  Bool(Bool)
+  Int(Int)
+  Real(Double)
+  Time(Int64)
+  String(String)
+  Null
+} derive(@debug.Debug)
+pub fn PlcValue::add(Self, Self) -> Self
+pub fn PlcValue::div(Self, Self) -> Self
+pub fn PlcValue::eq(Self, Self) -> Bool
+pub fn PlcValue::is_true(Self) -> Bool
+pub fn PlcValue::lt(Self, Self) -> Bool
+pub fn PlcValue::lte(Self, Self) -> Bool
+pub fn PlcValue::modulo(Self, Self) -> Self
+pub fn PlcValue::mul(Self, Self) -> Self
+pub fn PlcValue::sub(Self, Self) -> Self
+pub fn PlcValue::to_double(Self) -> Double
+pub fn PlcValue::to_int(Self) -> Int
+pub fn PlcValue::to_string_repr(Self) -> String
+
+pub(all) struct PlcVm {
+  mut instructions : Array[IlInstruction]
+  mem : PlcMemory
+  mut pc : Int
+  mut acc : PlcValue
+  mut halted : Bool
+} derive(@debug.Debug)
+pub fn PlcVm::load_instructions(Self, Array[IlInstruction]) -> Unit
+pub fn PlcVm::new(PlcMemory) -> Self
+pub fn PlcVm::reset(Self) -> Unit
+pub fn PlcVm::run(Self, Int) -> Unit
+pub fn PlcVm::step(Self) -> Bool
+
+pub(all) struct Program {
+  name : String
+  variables : Array[VarDecl]
+  statements : Array[Stmt]
+} derive(@debug.Debug)
+pub fn Program::new(String) -> Self
+
+pub(all) struct RTrig {
+  mut clk_prev : Bool
+  mut q : Bool
+} derive(@debug.Debug)
+pub fn RTrig::new() -> Self
+pub fn RTrig::tick(Self, Bool) -> Bool
+
+pub(all) struct RsFlipFlop {
+  mut q1 : Bool
+} derive(@debug.Debug)
+pub fn RsFlipFlop::new() -> Self
+pub fn RsFlipFlop::tick(Self, Bool, Bool) -> Bool
+
+pub(all) struct Rung {
+  id : Int
+  comment : String
+  condition : LadderNode
+  coils : Array[Coil]
+} derive(@debug.Debug)
+pub fn Rung::new(Int, String, LadderNode, Array[Coil]) -> Self
+
+pub(all) struct SrFlipFlop {
+  mut q1 : Bool
+} derive(@debug.Debug)
+pub fn SrFlipFlop::new() -> Self
+pub fn SrFlipFlop::tick(Self, Bool, Bool) -> Bool
+
+pub(all) enum Stmt {
+  Assign(String, Expr)
+  AssignAddress(PlcAddress, Expr)
+  AssignField(String, String, Expr)
+  If(Expr, Array[Stmt], Array[(Expr, Array[Stmt])], Array[Stmt])
+  While(Expr, Array[Stmt])
+  For(String, Expr, Expr, Expr?, Array[Stmt])
+  FbCall(String, String, Array[(String, Expr)])
+  Empty
+} derive(@debug.Debug)
+
+pub(all) struct TofTimer {
+  mut in_state : Bool
+  mut pt : Int64
+  mut et : Int64
+  mut q : Bool
+} derive(@debug.Debug)
+pub fn TofTimer::new() -> Self
+pub fn TofTimer::tick(Self, Bool, Int64, Int64) -> Unit
+
+pub(all) enum Token {
+  KwProgram
+  KwEndProgram
+  KwVar
+  KwEndVar
+  KwVarInput
+  KwVarOutput
+  KwAt
+  KwIf
+  KwThen
+  KwElsif
+  KwElse
+  KwEndIf
+  KwWhile
+  KwEndWhile
+  KwDo
+  KwFor
+  KwTo
+  KwBy
+  KwEndFor
+  KwAnd
+  KwOr
+  KwNot
+  KwXor
+  KwMod
+  Assign
+  Equal
+  NotEqual
+  LessThan
+  LessThanEqual
+  GreaterThan
+  GreaterThanEqual
+  Plus
+  Minus
+  Star
+  Slash
+  LParen
+  RParen
+  Comma
+  Semicolon
+  Colon
+  Dot
+  Ident(String)
+  BoolLit(Bool)
+  IntLit(Int)
+  RealLit(Double)
+  TimeLit(Int64)
+  StringLit(String)
+  DirectAddr(PlcAddress)
+  EOF
+} derive(Eq, @debug.Debug)
+
+pub(all) struct TonTimer {
+  mut in_state : Bool
+  mut pt : Int64
+  mut et : Int64
+  mut q : Bool
+} derive(@debug.Debug)
+pub fn TonTimer::new() -> Self
+pub fn TonTimer::tick(Self, Bool, Int64, Int64) -> Unit
+
+pub(all) struct TonrTimer {
+  mut in_state : Bool
+  mut pt : Int64
+  mut et : Int64
+  mut q : Bool
+} derive(@debug.Debug)
+pub fn TonrTimer::new() -> Self
+pub fn TonrTimer::tick(Self, Bool, Bool, Int64, Int64) -> Unit
+
+pub(all) struct TpTimer {
+  mut in_prev : Bool
+  mut active : Bool
+  mut pt : Int64
+  mut et : Int64
+  mut q : Bool
+} derive(@debug.Debug)
+pub fn TpTimer::new() -> Self
+pub fn TpTimer::tick(Self, Bool, Int64, Int64) -> Unit
+
+pub(all) enum UnaryOp {
+  Not
+  Neg
+} derive(Eq, @debug.Debug)
+
+pub(all) struct VarDecl {
+  name : String
+  var_type : String
+  init_val : PlcValue?
+  located_at : PlcAddress?
+} derive(@debug.Debug)
+
+// Type aliases
+
+// Traits
